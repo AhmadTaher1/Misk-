@@ -18,13 +18,23 @@ export class LoginComponent {
     this.authService.login(this.email, this.password).subscribe({
       next: (res) => {
         if (res.success && res.data?.token) {
-          this.authService.saveToken(res.data.token);
+          this.authService.saveToken(res.data.token, res.data.role);
+          console.log('Login Response:', res);
+          console.log('Role:', res.data.role);
+
           const redirect = this.authService.getRedirectUrl();
           if (redirect) {
             this.authService.clearRedirectUrl();
             this.router.navigateByUrl(redirect);
           }
-          else  this.router.navigate(['/home']);  
+          else {
+            // 👇 Redirect based on role
+          if (res.data.role === 'ADMIN') {
+            this.router.navigate(['/admin/users']);
+          } else {
+            this.router.navigate(['/home']);
+          }
+          }  
         }
       },
       error: (err) => {

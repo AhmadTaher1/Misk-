@@ -25,8 +25,9 @@ export class AuthService {
     return this.http.post("http://localhost:8085/users/login", {email, password});
   }
 
-  saveToken(token: string): void {
+  saveToken(token: string, role:string): void {
     localStorage.setItem("token", token);
+    localStorage.setItem("role", role );
     this.loggedIn.next(true);
   }
 

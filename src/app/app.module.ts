@@ -26,6 +26,7 @@ import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { MainLayoutComponent } from './layouts/main-layout/main-layout.component';
 import { CartComponent } from './components/cart/cart.component';
 import { AuthInterceptor } from './interceptors/auth/auth.interceptor';
+import { Error403Component } from './errors/error403/error403.component';
 
 @NgModule({
   declarations: [
@@ -50,7 +51,8 @@ import { AuthInterceptor } from './interceptors/auth/auth.interceptor';
     AdminProductsComponent,
     AdminProductEditComponent,
     AdminProductAddComponent,
-    MainLayoutComponent
+    MainLayoutComponent,
+    Error403Component
   ],
   imports: [
     BrowserModule,
