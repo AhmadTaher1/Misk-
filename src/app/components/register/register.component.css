@@ -1,0 +1,7 @@
+.login_box_area .row {
+  display: flex;
+  align-items: stretch;
+}
+.login_box_img, .login_form_inner {
+  height: 100%;
+}
