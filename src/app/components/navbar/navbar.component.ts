@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
-import { Subscription } from 'rxjs';
+import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -16,6 +16,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private cartSubscription: Subscription = new Subscription();
   private loginSubscription: Subscription = new Subscription();
+  private refreshSubscription!: Subscription;
+  private cartChangedSubscription!: Subscription;
+  toastSuccess = true;
+  toastMessage = '';
+  isToastVisible = false;
+  @ViewChild('toastElement') toastElement!: ElementRef;
 
   constructor(private authService: AuthService, private cartService: CartService, private router: Router) {}
 
@@ -36,11 +42,32 @@ export class NavbarComponent implements OnInit, OnDestroy {
         }, 0);
       }
     );
+
+    // cart checking every 10 sec
+    this.refreshSubscription = interval(10000).subscribe(() => {
+      this.cartService.checkForCartChanges();
+    });
+
+    
+    this.cartChangedSubscription = this.cartService.cartChanged$.subscribe((changeInfo) => {
+      if (changeInfo.hasStockChanges && changeInfo.changedItems.length > 0) {
+        const itemsText = changeInfo.changedItems.length === 1 
+          ? `${changeInfo.changedItems[0]} has` 
+          : `${changeInfo.changedItems.length} items have`;
+        
+        this.showToast(
+          false, 
+          `${itemsText} changed due to stock updates. Please check your cart.`
+        );
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.cartSubscription.unsubscribe();
     this.loginSubscription.unsubscribe();
+    this.refreshSubscription?.unsubscribe();
+    this.cartChangedSubscription?.unsubscribe();
   }
 
   refreshState(): void {
@@ -65,13 +92,20 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.router.navigate(['/cart']);
   }
 
-  /*simulateLogin(): void {
-    this.authService.login();
-    this.refreshState();
-  } */
+  goToLogin(): void {
+    this.authService.setRedirectUrl(this.router.url);
+    this.router.navigate(['/login']);
+  }
+  
+  showToast(success: boolean, message: string): void {
+    this.toastSuccess = success;
+    this.toastMessage = message;
 
-    goToLogin(): void {
-      this.authService.setRedirectUrl(this.router.url);
-      this.router.navigate(['/login']);
-    }
+    setTimeout(() => {
+      if (this.toastElement?.nativeElement) {
+        const toast = new (window as any).bootstrap.Toast(this.toastElement.nativeElement);
+        toast.show();
+      }
+    }, 100);
+  }
 }

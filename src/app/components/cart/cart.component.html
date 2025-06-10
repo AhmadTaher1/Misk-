@@ -34,7 +34,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr class="product-row" *ngFor="let item of cartItems">
+            <tr class="product-row" *ngFor="let item of cartItems; trackBy: trackByProductId">
               <td>
                 <div class="media">
                   <div class="d-flex">
