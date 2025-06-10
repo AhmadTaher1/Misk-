@@ -21,12 +21,12 @@ export class ProductComponent implements OnInit, AfterViewInit {
   filters = {
     name: '',
     minPrice: 0,
-    maxPrice: 1000,
+    maxPrice: 10000,
     brands: [] as string[]
   };
   sliderOptions: Options = {
     floor: 0,
-    ceil: 1000,
+    ceil: 10000,
     step: 1,
     animate: false,
     showTicks: false,
@@ -59,7 +59,7 @@ export class ProductComponent implements OnInit, AfterViewInit {
     this.route.queryParams.subscribe(params => {
       this.filters.name = params['name'] || '';
       this.filters.minPrice = +params['minPrice'] || 0;
-      this.filters.maxPrice = +params['maxPrice'] || this.sliderOptions.ceil || 1000;
+      this.filters.maxPrice = +params['maxPrice'] || this.sliderOptions.ceil || 10000;
       this.filters.brands = (params['brands'] || '').split(',').filter(Boolean) as string[] || [];
       this.currentPage = +params['page'] || 1;
       this.selectedGender = params['gender'] || 'all';
@@ -150,7 +150,7 @@ export class ProductComponent implements OnInit, AfterViewInit {
     this.filters = {
       name: '',
       minPrice: 0,
-      maxPrice: this.sliderOptions.ceil || 1000,
+      maxPrice: this.sliderOptions.ceil || 10000,
       brands: []
     };
     this.selectedGender = 'all';
@@ -254,7 +254,7 @@ export class ProductComponent implements OnInit, AfterViewInit {
     this.productService.getFilteredProducts({
       name: '',
       minPrice: 0,
-      maxPrice: 50000,
+      maxPrice: 10000,
       brands: [],
       page: 0,
       pageSize: 50
@@ -286,7 +286,7 @@ export class ProductComponent implements OnInit, AfterViewInit {
         } else {
           this.sliderOptions = {
             floor: 0,
-            ceil: 1000,
+            ceil: 10000,
             step: 1,
             animate: false,
             showTicks: false,
@@ -300,7 +300,7 @@ export class ProductComponent implements OnInit, AfterViewInit {
         console.error('Error initializing slider:', err);
         this.sliderOptions = {
           floor: 0,
-          ceil: 1000,
+          ceil: 10000,
           step: 1,
           animate: false,
           showTicks: false,
