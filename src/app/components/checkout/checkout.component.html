@@ -1,15 +1,15 @@
 <!-- checkout.component.html -->
 <section class="checkout_area section-margin--small">
-  <div class="order-address" 
+  <div class="order-address"
        style="font-size: 16px; margin: 100px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
     <h3 style="font-size: 30px; margin-bottom: 15px">Select Shipping Address</h3>
 
     <div *ngFor="let address of addresses">
       <label style="display: block; margin-bottom: 8px; font-size: 18px">
-        <input type="radio" name="shipping-address" [value]="address.addressId" 
+        <input type="radio" name="shipping-address" [value]="address.addressId"
                [checked]="selectedAddressId === address.addressId"
                (change)="setAddress(address.addressId)"/>
-        {{address.name}} - {{address.recipient}} - {{address.street}} - {{address.city}}
+        {{address.state}} - {{address.city}} - {{address.street}} - {{address.departmentNumber}}
       </label>
     </div>
   </div>
@@ -26,7 +26,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of cartItems" 
+          <tr *ngFor="let item of cartItems"
               style="border-bottom: 1px solid #ddd" class="t-pro">
             <td style="padding: 10px">{{item.name}}</td>
             <td style="text-align: center; padding: 10px">x {{item.quantity}}</td>
@@ -46,7 +46,7 @@
           <span>Shipping</span>
           <span class="shipping-price">shipping fees: {{shippingFee | currency:'EGP':'symbol'}}</span>
         </li>
-        <li class="order-total" 
+        <li class="order-total"
             style="display: flex; justify-content: space-between; font-weight: bold; font-size: 24px">
           <span>Total</span>
           <span class="overall-price">{{total | currency:'EGP':'symbol'}}</span>
@@ -61,12 +61,12 @@
 
       <div class="order-confirm" style="text-align: center; margin-top: 20px">
         <input type="hidden" name="addID" [value]="selectedAddressId" />
-        
-        <button type="button" class="button button-confirm" 
+
+        <button type="button" class="button button-confirm"
                 style="font-size: 22px; padding: 10px 20px" (click)="submitOrder()">
           Confirm Order
         </button>
-        <button type="button" class="button button-confirm" 
+        <button type="button" class="button button-confirm"
                 style="font-size: 22px; padding: 10px 20px" (click)="discardOrder()">
           Discard Order
         </button>
@@ -90,7 +90,7 @@
 </div>
 
 <!-- Terms Modal -->
-<div class="modal fade" [class.show]="showTermsModal" [style.display]="showTermsModal ? 'block' : 'none'" 
+<div class="modal fade" [class.show]="showTermsModal" [style.display]="showTermsModal ? 'block' : 'none'"
      tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
