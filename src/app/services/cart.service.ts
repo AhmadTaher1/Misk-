@@ -1,87 +1,260 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-
-export interface CartItem {
-  productId: number;
-  quantity: number;
-}
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { map, catchError, tap } from 'rxjs/operators';
+import { AuthService } from './auth.service';
+import { CartItemDto,CartResponse,ApiResponse, CartItem } from '../models/cart';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CartService {
+  private apiUrl = 'http://localhost:8085/cart';
   private cartCountSubject = new BehaviorSubject<number>(0);
   public cartCount$ = this.cartCountSubject.asObservable();
-  private cartItems: { id: number; name: string; price: number; quantity: number; imageUrl?: string }[] = [];
+  private cartItems: CartItem[] = [];
 
-  constructor() {
-    this.updateCartCount();
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {
+    
+    if (this.authService.isLoggedIn()) {
+      this.loadCartFromAPI();
+    }
+
+   
+    this.authService.isLoggedInObservable().subscribe(isLoggedIn => {
+      if (isLoggedIn) {
+        this.loadCartFromAPI();
+      } else {
+        this.clearLocalCart();
+      }
+    });
   }
 
-  getCartItems(): { id: number; name: string; price: number; quantity: number; imageUrl?: string }[] {
+  
+  loadCartFromAPI(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.clearLocalCart();
+      return;
+    }
+
+    this.http.get<ApiResponse<CartResponse>>(`${this.apiUrl}`).pipe(
+      catchError(error => {
+        console.error('Error loading cart:', error);
+        this.clearLocalCart();
+        return of({ success: false, message: 'Error loading cart', data: { items: [], totalItems: 0, totalPrice: 0 } });
+      })
+    ).subscribe(response => {
+      if (response.success && response.data) {
+        this.cartItems = response.data.items || [];
+        this.updateCartCount();
+      } else {
+        this.clearLocalCart();
+      }
+    });
+  }
+
+  //local copy
+  getCartItems(): CartItem[] {
     return [...this.cartItems];
   }
 
+  // unique 
   getCartCount(): number {
-    const items = this.getCartItems();
-    return items.reduce((total, item) => total + item.quantity, 0);
+    return this.cartItems.length;
   }
 
-  getUniqueItemsCount(): number {
-    return this.getCartItems().length;
+  
+  getTotalQuantity(): number {
+    return this.cartItems.reduce((total, item) => total + item.quantity, 0);
   }
 
-  addItem(productId: number, quantity: number, name?: string, price?: number, imageUrl?: string): void {
-    const existingItem = this.cartItems.find(item => item.id === productId);
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      this.cartItems.push({ id: productId, name: name || 'Unknown', price: price || 0, quantity, imageUrl });
+ 
+  getTotalPrice(): number {
+    return this.cartItems.reduce((total, item) => total + item.totalPrice, 0);
+  }
+
+  
+  addItem(productId: number, quantity: number = 1): Observable<boolean> {
+    if (!this.authService.isLoggedIn()) {
+      return of(false);
     }
-    this.saveCart();
-    this.updateCartCount();
-  }
 
-  private saveCart(): void {
-    localStorage.setItem('cart', JSON.stringify(this.cartItems));
-  }
-
-  removeItem(productId: number): void {
-    const items = this.getCartItems();
-    const updatedItems = items.filter(item => item.id !== productId);
-    localStorage.setItem('cartItems', JSON.stringify(updatedItems));
-    this.updateCartCount();
-  }
-
-  updateItemQuantity(productId: number, quantity: number): void {
-    const items = this.getCartItems();
-    const itemIndex = items.findIndex(item => item.id === productId);
-    
-    if (itemIndex > -1) {
-      if (quantity <= 0) {
-        // remove item if quantity is 0 
-        items.splice(itemIndex, 1);
-      } else {
-        items[itemIndex].quantity = quantity;
+    return this.http.post<ApiResponse<CartResponse>>(`${this.apiUrl}/add`, null, {
+      params: {
+        productId: productId.toString(),
+        quantity: quantity.toString()
       }
-      localStorage.setItem('cartItems', JSON.stringify(items));
-      this.updateCartCount();
-    }
+    }).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.cartItems = response.data.items || [];
+          this.updateCartCount();
+        }
+      }),
+      map(response => response.success),
+      catchError(error => {
+        console.error('Error adding item to cart:', error);
+        return of(false);
+      })
+    );
   }
 
+  
+  updateItemQuantity(productId: number, quantity: number): Observable<boolean> {
+    if (!this.authService.isLoggedIn()) {
+      return of(false);
+    }
+
+    if (quantity <= 0) {
+      return this.removeItem(productId);
+    }
+
+    return this.http.put<ApiResponse<CartResponse>>(`${this.apiUrl}/update`, null, {
+      params: {
+        productId: productId.toString(),
+        quantity: quantity.toString()
+      }
+    }).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.cartItems = response.data.items || [];
+          this.updateCartCount();
+        }
+      }),
+      map(response => response.success),
+      catchError(error => {
+        console.error('Error updating cart item:', error);
+        return of(false);
+      })
+    );
+  }
+
+  
+  removeItem(productId: number): Observable<boolean> {
+    if (!this.authService.isLoggedIn()) {
+      return of(false);
+    }
+
+    return this.http.delete<ApiResponse<CartResponse>>(`${this.apiUrl}/remove`, {
+      params: {
+        productId: productId.toString()
+      }
+    }).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.cartItems = response.data.items || [];
+          this.updateCartCount();
+        }
+      }),
+      map(response => response.success),
+      catchError(error => {
+        console.error('Error removing item from cart:', error);
+        return of(false);
+      })
+    );
+  }
+
+  
+  clearCart(): Observable<boolean> {
+    if (!this.authService.isLoggedIn()) {
+      this.clearLocalCart();
+      return of(true);
+    }
+
+    return this.http.delete<ApiResponse<string>>(`${this.apiUrl}/clear`).pipe(
+      tap(response => {
+        if (response.success) {
+          this.clearLocalCart();
+        }
+      }),
+      map(response => response.success),
+      catchError(error => {
+        console.error('Error clearing cart:', error);
+        this.clearLocalCart(); 
+        return of(true);
+      })
+    );
+  }
+
+  // for a specific product
   getItemQuantity(productId: number): number {
-    const items = this.getCartItems();
-    const item = items.find(item => item.id === productId);
+    const item = this.cartItems.find(item => item.productId === productId);
     return item ? item.quantity : 0;
   }
 
-  clearCart(): void {
-    localStorage.removeItem('cartItems');
+  
+  bulkAddToCart(items: CartItemDto[]): Observable<boolean> {
+    if (!this.authService.isLoggedIn()) {
+      return of(false);
+    }
+
+    return this.http.post<ApiResponse<CartResponse>>(`${this.apiUrl}/bulk-add`, items).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.cartItems = response.data.items || [];
+          this.updateCartCount();
+        }
+      }),
+      map(response => response.success),
+      catchError(error => {
+        console.error('Error bulk adding to cart:', error);
+        return of(false);
+      })
+    );
+  }
+
+  // for verification
+  getCartCountFromAPI(): Observable<number> {
+    if (!this.authService.isLoggedIn()) {
+      return of(0);
+    }
+
+    return this.http.get<ApiResponse<number>>(`${this.apiUrl}/count`).pipe(
+      map(response => response.success ? (response.data || 0) : 0),
+      catchError(error => {
+        console.error('Error getting cart count:', error);
+        return of(0);
+      })
+    );
+  }
+
+  canAddToCart(productId: number, requestedQuantity: number): boolean {
+    const cartItem = this.cartItems.find(item => item.productId === productId);
+    if (!cartItem) {
+      return true; 
+    }
+    
+    return (cartItem.quantity + requestedQuantity) <= cartItem.availableStock;
+  }
+
+
+  getAvailableStock(productId: number): number {
+    const cartItem = this.cartItems.find(item => item.productId === productId);
+    return cartItem ? cartItem.availableStock : 0;
+  }
+
+
+  isProductOutOfStock(productId: number): boolean {
+    const cartItem = this.cartItems.find(item => item.productId === productId);
+    return cartItem ? cartItem.availableStock <= 0 : false;
+  }
+
+
+  private clearLocalCart(): void {
+    this.cartItems = [];
     this.updateCartCount();
   }
 
   private updateCartCount(): void {
     const count = this.getCartCount();
     this.cartCountSubject.next(count);
+  }
+
+  // force
+  refreshCart(): void {
+    this.loadCartFromAPI();
   }
 }

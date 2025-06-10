@@ -184,20 +184,29 @@ export class ProductComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const currentCartQuantity = this.cartService.getItemQuantity(perfume.id);
-    if (currentCartQuantity >= perfume.quantity) {
+    if (!this.cartService.canAddToCart(perfume.id, 1)) {
       this.showToast(false, `${perfume.name} is already at maximum quantity in your cart!`);
       return;
     }
 
-    this.cartService.addItem(perfume.id, 1);
-    const newQuantity = currentCartQuantity + 1;
-    
-    if (currentCartQuantity > 0) {
-      this.showToast(true, `${perfume.name} quantity updated in cart! Total: ${newQuantity}`);
-    } else {
-      this.showToast(true, `${perfume.name} added to cart!`);
-    }
+    this.cartService.addItem(perfume.id, 1).subscribe({
+      next: (success) => {
+        if (success) {
+          const newQuantity = this.cartService.getItemQuantity(perfume.id);
+          if (newQuantity > 1) {
+            this.showToast(true, `${perfume.name} quantity updated in cart! Total: ${newQuantity}`);
+          } else {
+            this.showToast(true, `${perfume.name} added to cart!`);
+          }
+        } else {
+          this.showToast(false, 'Failed to add item to cart. Please try again.');
+        }
+      },
+      error: (error) => {
+        console.error('Error adding to cart:', error);
+        this.showToast(false, error.error?.message || 'Failed to add item to cart. Please try again.');
+      }
+    });
   }
 
   showToast(success: boolean, message: string): void {
@@ -303,7 +312,4 @@ export class ProductComponent implements OnInit, AfterViewInit {
     });
   }
 
-  private updateSliderOptions(): void {
-    this.loadProducts();
-  }
 }

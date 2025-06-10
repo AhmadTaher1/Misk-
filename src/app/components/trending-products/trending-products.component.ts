@@ -15,6 +15,7 @@ export class TrendingProductsComponent implements OnInit {
   toastSuccess: boolean = false;
   toastMessage: string = '';
   showLoginToast: boolean = false;
+  isAddingToCart: { [productId: number]: boolean } = {};
   @ViewChild('toastElement') toastElement!: ElementRef;
   @ViewChild('loginToastElement') loginToastElement!: ElementRef;
 
@@ -53,19 +54,45 @@ export class TrendingProductsComponent implements OnInit {
       return;
     }
 
-    const currentCartQuantity = this.cartService.getItemQuantity(perfume.id);
-    if (currentCartQuantity >= perfume.quantity) {
+    if (this.isAddingToCart[perfume.id]) {
+      return;
+    }
+
+    if (!this.cartService.canAddToCart(perfume.id, 1)) {
       this.showToast(false, `${perfume.name} is already at maximum quantity in your cart!`);
       return;
     }
 
-    this.cartService.addItem(perfume.id, 1);
-    const newQuantity = currentCartQuantity + 1;
-    if (currentCartQuantity > 0) {
-      this.showToast(true, `${perfume.name} quantity updated in cart! Total: ${newQuantity}`);
-    } else {
-      this.showToast(true, `${perfume.name} added to cart!`);
-    }
+    this.isAddingToCart[perfume.id] = true;
+
+    this.cartService.addItem(perfume.id, 1).subscribe({
+      next: (success) => {
+        this.isAddingToCart[perfume.id] = false;
+        if (success) {
+          const newQuantity = this.cartService.getItemQuantity(perfume.id);
+          if (newQuantity > 1) {
+            this.showToast(true, `${perfume.name} quantity updated in cart! Total: ${newQuantity}`);
+          } else {
+            this.showToast(true, `${perfume.name} added to cart!`);
+          }
+        } else {
+          this.showToast(false, 'Failed to add item to cart. Please try again.');
+        }
+      },
+      error: (error) => {
+        this.isAddingToCart[perfume.id] = false;
+        console.error('Error adding to cart:', error);
+        this.showToast(false, error.error?.message || 'Failed to add item to cart. Please try again.');
+      }
+    });
+  }
+
+  isProductBeingAdded(productId: number): boolean {
+    return this.isAddingToCart[productId] || false;
+  }
+
+  getCartQuantity(productId: number): number {
+    return this.cartService.getItemQuantity(productId);
   }
 
   showToast(success: boolean, message: string): void {

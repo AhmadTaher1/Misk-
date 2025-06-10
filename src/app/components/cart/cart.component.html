@@ -2,7 +2,28 @@
 <section class="cart_area">
   <div class="container">
     <div class="cart_inner">
-      <div class="table-responsive">
+      <div *ngIf="cartItems.length === 0" class="empty-cart">
+        <div class="empty-cart-icon">
+  <svg width="100" height="100" viewBox="0 0 24 24" fill="none"
+       xmlns="http://www.w3.org/2000/svg">
+    <path d="M7 18C6.44772 18 6 18.4477 6 19C6 19.5523 6.44772 20 7 20C7.55228 20 8 19.5523 8 19C8 18.4477 7.55228 18 7 18ZM17 18C16.4477 18 16 18.4477 16 19C16 19.5523 16.4477 20 17 20C17.5523 20 18 19.5523 18 19C18 18.4477 17.5523 18 17 18ZM7.16 14H16.84C17.5326 14 18.1189 13.5786 18.3623 12.9438L20.7216 6.61099C20.8936 6.15212 20.5366 5.66667 20.0452 5.66667H5.62059L4.86402 3.33333H2V5H3.13598L5.72095 12.7234C5.92641 13.3642 6.51729 13.8333 7.16 13.8333V14Z"
+          fill="#384AEB"/>
+  </svg>
+        </div>
+        <h2 style="color: #4958e3;">Your Cart is Empty!</h2>
+        <p style="color: #4a4a4a;">Must add items on the cart before you proceed to checkout.</p>
+<button class="primary-btn" (click)="continueShopping()" style="margin: 10px; background-color: #384AEB; border-color: #384AEB; color: white;">
+  <svg width="20" height="30" viewBox="0 0 24 24" fill="none"
+       xmlns="http://www.w3.org/2000/svg"
+       style="vertical-align: middle; margin-right: 5px;">
+    <path d="M6 7V6C6 3.79086 7.79086 2 10 2H14C16.2091 2 18 3.79086 18 6V7H20C20.5523 7 21 7.44772 21 8V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V8C3 7.44772 3.44772 7 4 7H6ZM8 6V7H16V6C16 4.89543 15.1046 4 14 4H10C8.89543 4 8 4.89543 8 6Z"
+          fill="white"/>
+  </svg>
+  BACK TO SHOP
+</button>
+
+      </div>
+      <div class="table-responsive" *ngIf="cartItems.length > 0">
         <table class="table" style="min-height: 100px">
           <thead>
             <tr>
@@ -17,11 +38,12 @@
               <td>
                 <div class="media">
                   <div class="d-flex">
-                    <img [src]="item.productPhoto" alt="{{ item.productName }}" />
+                    <img [src]="'http://localhost:8085/images/' + (item.productPhoto || 'default.jpg')" alt="{{ item.productName }}" />
                   </div>
                   <div class="media-body">
                     <p>{{ item.productName }}</p>
-                    <a href="#" style="font-size: 12px" class="removeitem" (click)="removeItem(item.id)">remove item</a>
+                    <span *ngIf="item.availableStock === 0" style="color: red; font-size: 12px">Out of Stock</span>
+                    <button (click)="removeItem(item.productId)" style="font-size: 14px; background: none; border: none; color: rgb(30, 116, 181); cursor: pointer;" title="Remove item">× Remove item</button>
                   </div>
                 </div>
               </td>
@@ -30,29 +52,31 @@
               </td>
               <td>
                 <div class="product_count">
-                  <input type="hidden" id="hidden" value="{{ item.id }}" />
+                  <input type="hidden" id="hidden" value="{{ item.productId }}" />
                   <input type="text" name="qty" maxlength="12" [(ngModel)]="item.quantity" title="Quantity:"
-                    class="input-text qty" [attr.data-max]="item.storage" readonly />
-                  <button class="increase items-count" type="button" (click)="increaseQuantity(item)">
+                    class="input-text qty" [attr.data-max]="item.availableStock" readonly />
+                  <button class="increase items-count" type="button" (click)="increaseQuantity(item)"
+                    [disabled]="item.quantity >= item.availableStock || item.availableStock === 0">
                     <i class="lnr lnr-chevron-up"></i>
                   </button>
-                  <button class="reduced items-count" type="button" (click)="decreaseQuantity(item)">
+                  <button class="reduced items-count" type="button" (click)="decreaseQuantity(item)"
+                    [disabled]="item.quantity <= 1">
                     <i class="lnr lnr-chevron-down"></i>
                   </button>
                 </div>
               </td>
               <td>
-                <h5 class="total-price">{{ item.productPrice * item.quantity }} EGP</h5>
+                <h5 class="total-price">{{ item.totalPrice }} EGP</h5>
               </td>
             </tr>
             <tr>
               <td></td>
               <td></td>
               <td>
-                <h5 style="font-size: 21px">Subtotal</h5>
+                <h2 style="font-size: 21px">Subtotal</h2>
               </td>
               <td>
-                <h5 style="font-size: 20px" #orderPrice>{{ subtotal }} EGP</h5>
+                <h2 style="font-size: 20px" #orderPrice>{{ subtotal }} EGP</h2>
               </td>
             </tr>
             <tr class="out_button_area">
@@ -64,7 +88,8 @@
                     <button type="button" class="primary-btn ml-2" (click)="continueShopping()" style="margin:4px">
                       Continue Shopping
                     </button>
-                    <button type="button" class="primary-btn ml-2" (click)="proceedToCheckout()" style="margin:4px">
+                    <button type="button" class="primary-btn ml-2" (click)="proceedToCheckout()" style="margin:4px"
+                      [disabled]="cartItems.length === 0">
                       Proceed to Checkout
                     </button>
                   </form>
@@ -78,3 +103,16 @@
   </div>
 </section>
 <!--================End Cart Area =================-->
+
+<!-- Toast Notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div #toastElement id="regularToast" class="toast align-items-center"
+    [ngClass]="{'text-bg-success': toastSuccess, 'text-bg-danger': !toastSuccess}" role="alert" aria-live="assertive"
+    aria-atomic="true" *ngIf="isToastVisible">
+    <div class="d-flex">
+      <div class="toast-body">{{ toastMessage }}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+        aria-label="Close"></button>
+    </div>
+  </div>
+</div>
